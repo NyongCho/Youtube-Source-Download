@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}" />
+    <title>Search Page</title>
+</head>
+<body>
+    <h1>Search Page</h1>
+    <form id="search-form">
+        <input type="text" id="keyword" name="keyword" placeholder="Enter keyword">
+        <button type="submit">Search</button>
+    </form>
+    <div id="results"></div>
+
+    <script>
+        document.getElementById('search-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            let keyword = document.getElementById('keyword').value;
+            let formData = new FormData();
+            formData.append('keyword', keyword);
+
+            fetch('/search', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                let resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = '';
+
+                data.forEach(video => {
+                    let resultItem = document.createElement('div');
+                    resultItem.className = 'result-item';
+                    resultItem.innerHTML = `
+                        <h3>${video.title}</h3>
+                        <p>Uploader: ${video.uploader}</p>
+                        
+                        <iframe src="https://www.youtube.com/embed/${video.video_id}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        <button class="download-button" data-url="${video.url}" data-title="${video.title}">Download Video</button>
+                        <button class="download-mp3-button" data-url="${video.url}" data-title="${video.title}">Download MP3</button>
+                    `;
+                    resultsDiv.appendChild(resultItem);
+                });
+
+                document.querySelectorAll('.download-button').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const videoUrl = this.getAttribute('data-url');
+                        const videoTitle = this.getAttribute('data-title');
+
+                        fetch('/download-video', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ url: videoUrl, title: videoTitle })
+                        })
+                        .then(response => response.blob())
+                        .then(blob => {
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.style.display = 'none';
+                            a.href = url;
+                            a.download = `${videoTitle}.mp4`;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                        })
+                        .catch(error => console.error('Error:', error));
+                    });
+                });
+                
+                document.querySelectorAll('.download-mp3-button').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const videoUrl = this.getAttribute('data-url');
+                        const videoTitle = this.getAttribute('data-title');
+
+                        fetch('/download-mp3', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ url: videoUrl, title: videoTitle })
+                        })
+                        .then(response => response.blob())
+                        .then(blob => {
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.style.display = 'none';
+                            a.href = url;
+                            a.download = `${videoTitle}.mp3`;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                        })
+                        .catch(error => console.error('Error:', error));
+                    });
+                });
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>
